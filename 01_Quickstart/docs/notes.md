@@ -181,6 +181,12 @@ checkpointer = InMemorySaver(
 
 4. 保存配置，然后使用该运行配置执行 **Run／Debug**。
 
+操作截图如下：
+
+![右键 agent.py，选择 More Run/Debug → Modify Run Configuration](../doc/pycharm01.jpg)
+
+![在运行配置的 Environment variables 中设置 OPENAI_BASE_URL 和 OPENAI_API_KEY](../doc/pycharm02.jpg)
+
 这里设置的环境变量仅对该运行配置启动的进程生效，不会自动应用到终端中手动执行的 `python agent.py`。
 
 > **注意：** 如果 `OPENAI_BASE_URL` 使用的是 proxy，可能需要配置成类似 `https://example.proxy.com/openai/v1` 的地址。具体路径以代理服务提供的 OpenAI 兼容 API 基础地址为准，不要只填写域名，也不要包含完整的 `/chat/completions` 接口路径。
