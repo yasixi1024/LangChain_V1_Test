@@ -4,6 +4,8 @@
 
 在 Anaconda Navigator 中打开终端或启动开发工具前，需要先选择项目对应的 Conda 虚拟环境，否则默认使用的是 `base` 环境。
 
+通过 PyCharm 运行 Conda 环境中的 Python，不需要保持 Anaconda Navigator 打开。退出 Navigator 不会删除 Conda 环境，也不会影响 PyCharm 已配置好的解释器。
+
 ## 2. 在 PyCharm 中创建 Conda 虚拟环境
 
 可以直接在 PyCharm 的可视化界面中创建 Conda 虚拟环境，无需通过命令行执行 `conda create`。
