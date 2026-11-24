@@ -4,6 +4,7 @@ import os
 from langchain.agents import create_agent
 # 从 LangGraph 导入内存检查点存储器，用于短期记忆与会话状态持久化
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 # 从 LangChain 导入 ToolStrategy，用于指定代理使用“工具调用”的结构化输出格式
 from langchain.agents.structured_output import ToolStrategy
 # 从自定义配置模块导入 Config 类，用于读取模型类型等配置
@@ -22,10 +23,9 @@ from utils.logger import LoggerManager
 # Author:@南哥AGI研习社 (B站 or YouTube 搜索“南哥AGI研习社”)
 
 
-# 设置 LangSmith 相关环境变量，开启 LangChain V2 版链路追踪，用于观测与调试 Agent 执行过程
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# 设置 LangSmith 的 API Key（实际项目中应通过环境变量或安全配置管理，避免写死在代码中）
-os.environ["LANGCHAIN_API_KEY"] = "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"
+# 关闭 LangSmith 链路追踪
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGSMITH_TRACING"] = "false"
 
 # 获取全局日志记录器，用于输出运行过程中的日志信息
 logger = LoggerManager.get_logger()
@@ -49,7 +49,13 @@ get_user_location：用于获取用户当前所在位置
 如果从问题中可以判断出用户指的是“我所在的地方”的天气，就使用 get_user_location 工具来获取用户的位置。"""
 
 # 创建一个基于内存的检查点存储器，用于保存对话状态，实现短期记忆与多轮会话关联
-checkpointer = InMemorySaver()
+checkpointer = InMemorySaver(
+    serde=JsonPlusSerializer(
+        allowed_msgpack_modules=[
+            ("utils.models", "ResponseFormat"),
+        ]
+    )
+)
 
 # 使用 LangChain 的 create_agent 创建一个 Agent 实例
 # - model: 指定使用的对话 LLM 模型
@@ -82,9 +88,9 @@ response = agent.invoke(
 )
 
 # 打印 Agent 返回的结构化响应部分（structured_response 一般是按 ResponseFormat 定义的结构化数据）
-print(f"Agent最终回复是: {response['structured_response']} \n")
+print(f"1. Agent最终回复是: {response['structured_response']} \n")
 # 通过日志记录器输出本次回复的 structured_response 内容，便于排查与分析
-logger.info(f"Agent最终回复是: {response['structured_response']}")
+logger.info(f"2. Agent最终回复是: {response['structured_response']}")
 
 # 再次调用 Agent，继续同一 thread_id 下的对话，从而复用短期记忆和已有上下文
 response = agent.invoke(
@@ -94,6 +100,6 @@ response = agent.invoke(
 )
 
 # 打印第二次调用的结构化响应内容
-print(f"Agent最终回复是: {response['structured_response']} \n")
+print(f"3. Agent最终回复是: {response['structured_response']} \n")
 # 通过日志记录器记录第二轮对话的 structured_response 结果
-logger.info(f"Agent最终回复是: : {response['structured_response']}")
+logger.info(f"4. Agent最终回复是: : {response['structured_response']}")

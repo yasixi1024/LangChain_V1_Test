@@ -69,3 +69,116 @@ python agent.py
 `pip check` 用于检查依赖声明是否满足；导入验证用于确认本次 `ImportError` 是否解决；最后运行脚本验证完整流程。
 
 注意：即使 `pip check` 通过，也不能单独证明代码层面的兼容性，因此还需要执行导入验证。
+
+## 4. LangSmith 跟踪上传返回 403 Forbidden
+
+### 4.1 报错现象
+
+如果遇到下面的错误，使用的 proxy 可能不支持或未正确转发 LangSmith 请求。不过，403 也可能由 LangSmith API Key 无效、工作区权限不足或区域配置不匹配引起，不能仅凭这段日志确定是 proxy 问题。
+
+```text
+Failed to multipart ingest runs: langsmith.utils.LangSmithError: Failed to POST https://api.smith.langchain.com/runs/multipart in LangSmith API. HTTPError('403 Client Error: Forbidden for url: https://api.smith.langchain.com/runs/multipart', '{"error":"Forbidden"}\n')
+Failed to send compressed multipart ingest: langsmith.utils.LangSmithError: Failed to POST https://api.smith.langchain.com/runs/multipart in LangSmith API. HTTPError('403 Client Error: Forbidden for url: https://api.smith.langchain.com/runs/multipart', '{"error":"Forbidden"}\n')
+Failed to send compressed multipart ingest: langsmith.utils.LangSmithError: Failed to POST https://api.smith.langchain.com/runs/multipart in LangSmith API. HTTPError('403 Client Error: Forbidden for url: https://api.smith.langchain.com/runs/multipart', '{"error":"Forbidden"}\n')
+Agent最终回复是: ResponseFormat(punny_response='北京的天气晴得像个笑话，真是让人心情大好！', weather_conditions='晴天')
+
+...
+```
+
+日志中已经输出两次 Agent 回复，说明对话调用成功，失败的是 LangSmith 跟踪数据上传。
+
+### 4.2 解决方法：关闭 LangSmith 跟踪
+
+如果不需要 LangSmith 跟踪，可以修改 `agent.py`，将：
+
+```python
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = "..."
+```
+
+改成：
+
+```python
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGSMITH_TRACING"] = "false"
+```
+
+保存后重新执行：
+
+```bash
+python agent.py
+```
+## 5. ResponseFormat 检查点反序列化警告
+
+### 5.1 警告现象
+
+如果运行时遇到下面的信息，说明出现了检查点反序列化警告；日志中已输出两次 Agent 回复，本次对话调用仍然成功：
+
+```text
+Agent最终回复是: ResponseFormat(punny_response='北京的天气晴得像个笑话，真是让人心情大好！', weather_conditions='晴天')
+
+Deserializing unregistered type utils.models.ResponseFormat from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('utils.models', 'ResponseFormat')]
+Agent最终回复是: ResponseFormat(punny_response='你现在在北京，真是个好地方，天气也很晴朗，适合出去走走！', weather_conditions=None)
+```
+
+### 5.2 问题原因
+
+`ResponseFormat` 是项目自定义的数据类。第一次调用后，它被存入检查点；第二次调用恢复会话时，LangGraph 发现这个类型没有被显式加入允许列表，于是提示：当前仍允许恢复，但未来版本将阻止这种行为。
+
+### 5.3 解决方法：显式允许恢复 ResponseFormat
+
+在 `agent.py` 中先添加导入：
+
+```python
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+```
+
+再将：
+
+```python
+checkpointer = InMemorySaver()
+```
+
+改为：
+
+```python
+checkpointer = InMemorySaver(
+    serde=JsonPlusSerializer(
+        allowed_msgpack_modules=[
+            ("utils.models", "ResponseFormat"),
+        ]
+    )
+)
+```
+
+该配置会保留会话记忆，并显式允许反序列化项目中的 `ResponseFormat`。[官方文档](https://reference.langchain.com/python/langgraph.checkpoint/serde/jsonplus/JsonPlusSerializer)
+
+不要只设置 `LANGGRAPH_STRICT_MSGPACK=true`：它会提前启用严格检查，未配置允许列表时可能直接报错。
+
+## 6. 通过环境变量配置模型服务
+
+### 6.1 配置变更
+
+已修改 `utils/llms.py` 中 `MODEL_CONFIGS` 的 `base_url` 和 `api_key`，这两个配置项不再硬编码，改为从环境变量中读取：
+
+```python
+"base_url": os.getenv("OPENAI_BASE_URL"),
+"api_key": os.getenv("OPENAI_API_KEY"),
+```
+
+### 6.2 在 PyCharm 中设置环境变量
+
+1. 在 PyCharm 的项目文件列表中选中 `agent.py`，点击右键。
+2. 选择 **More Run/Debug → Modify Run Configuration**。
+3. 在 **Environment variables（环境变量）** 中配置以下两个变量的值：
+
+   | 变量名 | 值 |
+   |---|---|
+   | `OPENAI_BASE_URL` | 模型服务的 API 基础地址 |
+   | `OPENAI_API_KEY` | 对应模型服务的 API Key |
+
+4. 保存配置，然后使用该运行配置执行 **Run／Debug**。
+
+这里设置的环境变量仅对该运行配置启动的进程生效，不会自动应用到终端中手动执行的 `python agent.py`。
+
+> **注意：** 如果 `OPENAI_BASE_URL` 使用的是 proxy，可能需要配置成类似 `https://example.proxy.com/openai/v1` 的地址。具体路径以代理服务提供的 OpenAI 兼容 API 基础地址为准，不要只填写域名，也不要包含完整的 `/chat/completions` 接口路径。

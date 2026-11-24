@@ -19,47 +19,14 @@ logger = LoggerManager.get_logger()
 MODEL_CONFIGS = {
     # 使用自定义 openai 代理服务的配置
     "openai": {
-        # LLM 服务的基础 URL
-        "base_url": "https://nangeai.top/v1",
-        # 调用该服务所需的 API Key
-        "api_key": "sk-zDeTqLS5dd2gnH3hXcaGbdEvp78RHHA30IiuiXsYfhHnDeRO",
+        # 从环境变量读取 LLM 服务的基础 URL
+        "base_url": os.getenv("OPENAI_BASE_URL"),
+        # 从环境变量读取调用该服务所需的 API Key
+        "api_key": os.getenv("OPENAI_API_KEY"),
         # 对话模型名称
-        "chat_model": "deepseek-v3.2",
+        "chat_model": "gpt-4o-mini",
         # 向量嵌入模型名称
         "embedding_model": "text-embedding-3-small"
-    },
-    # 使用 oneapi 网关服务的配置
-    "oneapi": {
-        # oneapi 服务的基础 URL
-        "base_url": "http://139.224.72.218:3000/v1",
-        # oneapi 的访问密钥
-        "api_key": "sk-GseYmJ8pX1D0I004W7a43506e8f1231234233C44B724FfD66aD9",
-        # 对话模型名称
-        "chat_model": "qwen-max",
-        # 向量嵌入模型名称
-        "embedding_model": "text-embedding-v1"
-    },
-    # 直连通义千问兼容 OpenAI 协议的配置
-    "qwen": {
-        # DashScope 兼容模式的基础 URL
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        # DashScope 的 API Key
-        "api_key": "sk-f718953877a84432436888b43b1bd8843026e2e5",
-        # 对话模型名称
-        "chat_model": "qwen-turbo-latest",
-        # 向量嵌入模型名称
-        "embedding_model": "text-embedding-v1"
-    },
-    # 本地 ollama 服务的配置
-    "ollama": {
-        # 本地 ollama HTTP 接口地址
-        "base_url": "http://localhost:11434/v1",
-        # 兼容 OpenAI 协议时需要传一个伪 API Key，这里固定写死
-        "api_key": "ollama",
-        # 使用的本地 LLaMA 对话模型
-        "chat_model": "llama3.1:8b",
-        # 使用的本地嵌入模型名称
-        "embedding_model": "nomic-embed-text:latest"
     }
 }
 
