@@ -183,9 +183,9 @@ checkpointer = InMemorySaver(
 
 操作截图如下：
 
-<img src="../doc/pycharm01.jpg" alt="右键 agent.py，选择 More Run/Debug → Modify Run Configuration" width="700">
+<img src="pycharm01.jpg" alt="右键 agent.py，选择 More Run/Debug → Modify Run Configuration" width="700">
 
-<img src="../doc/pycharm02.jpg" alt="在运行配置的 Environment variables 中设置 OPENAI_BASE_URL 和 OPENAI_API_KEY" width="700">
+<img src="pycharm02.jpg" alt="在运行配置的 Environment variables 中设置 OPENAI_BASE_URL 和 OPENAI_API_KEY" width="700">
 
 这里设置的环境变量仅对该运行配置启动的进程生效，不会自动应用到终端中手动执行的 `python agent.py`。
 
